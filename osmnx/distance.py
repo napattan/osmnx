@@ -11,7 +11,7 @@ from typing import overload
 import networkx as nx
 import numpy as np
 import numpy.typing as npt
-from shapely import Point
+import shapely
 from shapely.strtree import STRtree
 
 from . import convert
@@ -510,6 +510,9 @@ def nearest_edges(
         X_arr = np.array(X)
         Y_arr = np.array(Y)
 
+    if len(X_arr) != len(Y_arr):  # pragma: no cover
+        msg = "`X` and `Y` must be of equal length."
+        raise ValueError(msg)
     if np.isnan(X_arr).any() or np.isnan(Y_arr).any():  # pragma: no cover
         msg = "`X` and `Y` cannot contain nulls."
         raise ValueError(msg)
@@ -521,7 +524,7 @@ def nearest_edges(
     rtree = STRtree(geoms)
 
     # use the r-tree to find each point's nearest neighbor and distance
-    points = [Point(xy) for xy in zip(X_arr, Y_arr, strict=True)]
+    points = shapely.points(X_arr, Y_arr)
     pos, dist_array = rtree.query_nearest(points, all_matches=False, return_distance=True)
 
     # if user passed X/Y lists, the 2nd subarray contains geom indices

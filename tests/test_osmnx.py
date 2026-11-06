@@ -293,6 +293,16 @@ def test_simplify_graph() -> None:
     assert all("lanes" not in data for _, _, data in Gs.edges(data=True))
 
 
+def test_circuity_avg() -> None:
+    """Test average circuity when straight-line distances sum to zero."""
+    Gu = nx.MultiGraph(crs="epsg:4326")
+    Gu.add_node(0, x=0.0, y=0.0)
+    Gu.add_edge(0, 0, length=0.0)
+    assert ox.stats.circuity_avg(Gu) is None
+    Gu.edges[0, 0, 0]["length"] = 10.0
+    assert ox.stats.circuity_avg(Gu) is None
+
+
 @pytest.mark.xdist_group(name="group1")
 def test_bearings() -> None:
     """Test bearings and orientation entropy."""

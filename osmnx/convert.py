@@ -11,8 +11,8 @@ from typing import overload
 import geopandas as gpd
 import networkx as nx
 import pandas as pd
+import shapely
 from shapely import LineString
-from shapely import Point
 
 from . import _validate
 from . import utils
@@ -209,8 +209,14 @@ def graph_to_gdfs(
 
         if node_geometry:
             # convert node x/y attributes to Points for geometry column
-            node_geoms = (Point(d["x"], d["y"]) for d in data)
-            gdf_nodes = gpd.GeoDataFrame(data, index=uvk, crs=crs, geometry=list(node_geoms))
+            xs = [d["x"] for d in data]
+            ys = [d["y"] for d in data]
+            gdf_nodes = gpd.GeoDataFrame(
+                data,
+                index=uvk,
+                crs=crs,
+                geometry=shapely.points(xs, ys),
+            )
         else:
             gdf_nodes = gpd.GeoDataFrame(data, index=uvk)
 
@@ -226,10 +232,10 @@ def graph_to_gdfs(
         u, v, k, data = zip(*G.edges(keys=True, data=True), strict=True)
 
         if fill_edge_geometry:
-            node_coords = {n: (G.nodes[n]["x"], G.nodes[n]["y"]) for n in G}
+            c = {n: (G.nodes[n]["x"], G.nodes[n]["y"]) for n in G}
             edge_geoms = (
-                d.get("geometry", LineString((node_coords[u], node_coords[v])))
-                for u, v, _, d in G.edges(keys=True, data=True)
+                d["geometry"] if "geometry" in d else LineString((c[u], c[v]))
+                for u, v, d in zip(u, v, data, strict=True)
             )
             gdf_edges = gpd.GeoDataFrame(data, crs=crs, geometry=list(edge_geoms))
 

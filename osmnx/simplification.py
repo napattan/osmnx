@@ -12,7 +12,6 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 from shapely import LineString
-from shapely import Point
 
 from . import convert
 from . import stats
@@ -440,7 +439,7 @@ def simplify_graph(  # noqa: C901, PLR0912
 
         # construct the new consolidated edge's geometry for this path
         path_attributes["geometry"] = LineString(
-            [Point((G.nodes[node]["x"], G.nodes[node]["y"])) for node in path],
+            [(G.nodes[node]["x"], G.nodes[node]["y"]) for node in path],
         )
 
         if track_merged:
@@ -797,10 +796,11 @@ def _consolidate_intersections_rebuild_graph(  # noqa: C901,PLR0912,PLR0915
 
     # STEP 6
     # create new edge from cluster to cluster for each edge in original graph
-    gdf_edges = convert.graph_to_gdfs(G, nodes=False)
-    for u, v, k, data in G.edges(keys=True, data=True):
-        u2 = gdf.loc[u, "cluster"]
-        v2 = gdf.loc[v, "cluster"]
+    cluster_map = gdf["cluster"].to_dict()
+    node_coords = {n: (d["x"], d["y"]) for n, d in G.nodes(data=True)}
+    for u, v, data in G.edges(data=True):
+        u2 = cluster_map[u]
+        v2 = cluster_map[v]
 
         # only create the edge if we're not connecting the cluster
         # to itself, but always add original self-loops
@@ -808,7 +808,7 @@ def _consolidate_intersections_rebuild_graph(  # noqa: C901,PLR0912,PLR0915
             data["u_original"] = u
             data["v_original"] = v
             if "geometry" not in data:
-                data["geometry"] = gdf_edges.loc[(u, v, k), "geometry"]
+                data["geometry"] = LineString((node_coords[u], node_coords[v]))
             Gc.add_edge(u2, v2, **data)
 
     # STEP 7
